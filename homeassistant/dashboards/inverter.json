@@ -1,0 +1,333 @@
+{
+    "views":  [
+                  {
+                      "type":  "sections",
+                      "sections":  [
+                                       {
+                                           "type":  "grid",
+                                           "cards":  [
+                                                         {
+                                                             "type":  "heading",
+                                                             "heading":  "Нова секція"
+                                                         },
+                                                         {
+                                                             "cardstyle":  "lite",
+                                                             "wide":  false,
+                                                             "large_font":  true,
+                                                             "show_solar":  true,
+                                                             "show_battery":  true,
+                                                             "show_grid":  true,
+                                                             "center_no_grid":  false,
+                                                             "card_height":  "100%",
+                                                             "card_width":  "100%",
+                                                             "decimal_places":  1,
+                                                             "decimal_places_energy":  1,
+                                                             "dynamic_line_width":  true,
+                                                             "max_line_width":  4,
+                                                             "min_line_width":  1,
+                                                             "inverter":  {
+                                                                              "modern":  true,
+                                                                              "model":  "deye",
+                                                                              "autarky":  "power",
+                                                                              "invert_battery":  true,
+                                                                              "show_mppt_efficiency":  true,
+                                                                              "show_temp":  true
+                                                                          },
+                                                             "battery":  {
+                                                                             "energy":  15360,
+                                                                             "shutdown_soc":  5,
+                                                                             "show_daily":  true,
+                                                                             "show_temp":  true,
+                                                                             "show_remaining_energy":  true,
+                                                                             "remaining_energy_to_shutdown":  true,
+                                                                             "animation_speed":  6,
+                                                                             "count":  3,
+                                                                             "max_power":  10000,
+                                                                             "invert_power":  false
+                                                                         },
+                                                             "solar":  {
+                                                                           "show_daily":  true,
+                                                                           "mppts":  2,
+                                                                           "animation_speed":  4,
+                                                                           "colour":  "#f1c40f",
+                                                                           "pv1_name":  "Trina 1",
+                                                                           "pv2_name":  "Trina 2",
+                                                                           "pv1_max_power":  2730,
+                                                                           "pv2_max_power":  2730,
+                                                                           "max_power":  5460,
+                                                                           "display_mode":  1,
+                                                                           "show_ratio":  true
+                                                                       },
+                                                             "load":  {
+                                                                          "show_daily":  true,
+                                                                          "animation_speed":  6
+                                                                      },
+                                                             "grid":  {
+                                                                          "show_daily_buy":  true,
+                                                                          "show_daily_sell":  true,
+                                                                          "invert_grid":  false,
+                                                                          "animation_speed":  6,
+                                                                          "label_daily_grid_buy":  "Day",
+                                                                          "label_daily_grid_sell":  "Night"
+                                                                      },
+                                                             "type":  "custom:sunsynk-power-flow-card",
+                                                             "dynamic_colour":  true,
+                                                             "panel_mode":  false,
+                                                             "entities":  {
+                                                                              "grid_buy_export_power_175":  "sensor.deye_grid_l1_power",
+                                                                              "grid_connected_status_194":  "binary_sensor.deye_grid",
+                                                                              "grid_voltage_150":  "sensor.deye_grid_l1_voltage",
+                                                                              "grid_current_164":  "sensor.deye_grid_l1_current",
+                                                                              "grid_frequency_149":  "sensor.deye_grid_frequency",
+                                                                              "day_grid_import_76":  "sensor.grid_import_tariff_day",
+                                                                              "day_pv_energy_108":  "sensor.deye_today_production",
+                                                                              "pv1_power_186":  "sensor.deye_pv1_power",
+                                                                              "pv1_voltage_109":  "sensor.deye_pv1_voltage",
+                                                                              "pv1_current_110":  "sensor.deye_pv1_current",
+                                                                              "pv2_power_187":  "sensor.deye_pv2_power",
+                                                                              "pv2_voltage_111":  "sensor.deye_pv2_voltage",
+                                                                              "pv2_current_112":  "sensor.deye_pv2_current",
+                                                                              "battery_soc_184":  "sensor.deye_battery",
+                                                                              "battery_power_190":  "sensor.deye_battery_power",
+                                                                              "battery_voltage_183":  "sensor.deye_battery_voltage",
+                                                                              "battery_temp_182":  "sensor.deye_battery_temperature",
+                                                                              "day_battery_charge_70":  "sensor.deye_today_battery_charge",
+                                                                              "day_battery_discharge_71":  "sensor.deye_today_battery_discharge",
+                                                                              "essential_power":  "sensor.deye_load_power",
+                                                                              "day_load_energy_84":  "sensor.deye_today_energy",
+                                                                              "inverter_current_166":  "sensor.deye_output_l1_current",
+                                                                              "inverter_status_59":  "sensor.deye_device_state",
+                                                                              "day_grid_export_77":  "sensor.grid_import_tariff_night",
+                                                                              "grid_ct_power_172":  "sensor.deye_grid_l1_power",
+                                                                              "essential_icon":  "mdi:home-lightning-bolt",
+                                                                              "inverter_power_175":  "sensor.deye_output_l1_power",
+                                                                              "grid_power_169":  "sensor.deye_grid_power",
+                                                                              "inverter_voltage_154":  "sensor.deye_output_l1_voltage",
+                                                                              "inverter_current_164":  "sensor.deye_output_l1_current",
+                                                                              "ac_temp":  "sensor.deye_temperature"
+                                                                          },
+                                                             "card_mod":  {
+                                                                              "style":  "ha-card {\n  --ha-card-background: #000000 !important;\n  --primary-text-color: #ffffff !important;\n  --secondary-text-color: #ffffff !important;\n  font-weight: 600 !important;\n  border-radius: 15px;\n  border: none !important;\n}\n.energy {\n  font-weight: 700 !important;\n  color: #f1c40f !important;\n}\n.busname {\n  font-weight: 400 !important;\n  text-transform: uppercase;\n  letter-spacing: 1px;\n}\n"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "heading",
+                                                             "heading":  "Керування"
+                                                         },
+                                                         {
+                                                             "type":  "conditional",
+                                                             "conditions":  [
+                                                                                {
+                                                                                    "condition":  "state",
+                                                                                    "entity":  "select.deye_time_of_use",
+                                                                                    "state":  "Disabled"
+                                                                                }
+                                                                            ],
+                                                             "card":  {
+                                                                          "type":  "custom:mushroom-template-card",
+                                                                          "entity":  "select.deye_time_of_use",
+                                                                          "primary":  "Time of Use",
+                                                                          "secondary":  "Вимкнено · натисни, щоб увімкнути",
+                                                                          "icon":  "mdi:clock-time-four-outline",
+                                                                          "icon_color":  "grey",
+                                                                          "tap_action":  {
+                                                                                             "action":  "perform-action",
+                                                                                             "perform_action":  "select.select_option",
+                                                                                             "target":  {
+                                                                                                            "entity_id":  "select.deye_time_of_use"
+                                                                                                        },
+                                                                                             "data":  {
+                                                                                                          "option":  "Week"
+                                                                                                      },
+                                                                                             "confirmation":  {
+                                                                                                                  "text":  "Увімкнути Time of Use на інверторі (щодня)?"
+                                                                                                              }
+                                                                                         },
+                                                                          "hold_action":  {
+                                                                                              "action":  "more-info"
+                                                                                          }
+                                                                      }
+                                                         },
+                                                         {
+                                                             "type":  "conditional",
+                                                             "conditions":  [
+                                                                                {
+                                                                                    "condition":  "state",
+                                                                                    "entity":  "select.deye_time_of_use",
+                                                                                    "state_not":  "Disabled"
+                                                                                }
+                                                                            ],
+                                                             "card":  {
+                                                                          "type":  "custom:mushroom-template-card",
+                                                                          "entity":  "select.deye_time_of_use",
+                                                                          "primary":  "Time of Use",
+                                                                          "secondary":  "Увімкнено ({{ states(\u0027select.deye_time_of_use\u0027) }}) · натисни, щоб вимкнути",
+                                                                          "icon":  "mdi:clock-time-four-outline",
+                                                                          "icon_color":  "green",
+                                                                          "tap_action":  {
+                                                                                             "action":  "perform-action",
+                                                                                             "perform_action":  "select.select_option",
+                                                                                             "target":  {
+                                                                                                            "entity_id":  "select.deye_time_of_use"
+                                                                                                        },
+                                                                                             "data":  {
+                                                                                                          "option":  "Disabled"
+                                                                                                      },
+                                                                                             "confirmation":  {
+                                                                                                                  "text":  "Вимкнути Time of Use на інверторі?"
+                                                                                                              }
+                                                                                         },
+                                                                          "hold_action":  {
+                                                                                              "action":  "more-info"
+                                                                                          }
+                                                                      }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-number-card",
+                                                             "entity":  "number.deye_zariad_vid_merezhi",
+                                                             "name":  "Заряд від мережі (0–120 A)",
+                                                             "icon":  "mdi:battery-charging",
+                                                             "icon_color":  "blue",
+                                                             "display_mode":  "slider",
+                                                             "grid_options":  {
+                                                                                  "columns":  "full"
+                                                                              }
+                                                         },
+                                                         {
+                                                             "type":  "custom:apexcharts-card",
+                                                             "header":  {
+                                                                            "show":  true,
+                                                                            "title":  "Енергія: Прогноз vs Факт (кВт·год)",
+                                                                            "show_states":  true,
+                                                                            "colorize_states":  true
+                                                                        },
+                                                             "graph_span":  "2d",
+                                                             "span":  {
+                                                                          "start":  "day"
+                                                                      },
+                                                             "now":  {
+                                                                         "show":  true,
+                                                                         "label":  "Зараз",
+                                                                         "color":  "#ff0000"
+                                                                     },
+                                                             "yaxis":  [
+                                                                           {
+                                                                               "min":  0,
+                                                                               "max":  "auto",
+                                                                               "decimals":  1
+                                                                           }
+                                                                       ],
+                                                             "series":  [
+                                                                            {
+                                                                                "entity":  "sensor.deye_today_production",
+                                                                                "name":  "Реальна генерація",
+                                                                                "type":  "line",
+                                                                                "color":  "#4caf50",
+                                                                                "stroke_width":  3,
+                                                                                "extend_to":  "now"
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.energy_production_today",
+                                                                                "name":  "Прогноз (сьогодні)",
+                                                                                "type":  "line",
+                                                                                "color":  "orange",
+                                                                                "stroke_width":  2,
+                                                                                "data_generator":  "var stateStr = String(entity.state).replace(\u0027,\u0027, \u0027.\u0027);\nvar value = parseFloat(stateStr);\nif (isNaN(value)) return [];\n\nvar start = new Date();\nstart.setHours(0,0,0,0);\nvar end = new Date();\nend.setHours(23,59,59,999);\n\nreturn [[start.getTime(), value], [end.getTime(), value]];\n"
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.energy_production_tomorrow",
+                                                                                "name":  "Прогноз (завтра)",
+                                                                                "type":  "line",
+                                                                                "color":  "#00bfff",
+                                                                                "stroke_width":  2,
+                                                                                "data_generator":  "var stateStr = String(entity.state).replace(\u0027,\u0027, \u0027.\u0027);\nvar value = parseFloat(stateStr);\nif (isNaN(value)) return [];\n\nvar start = new Date();\nstart.setDate(start.getDate() + 1);\nstart.setHours(0,0,0,0);\nvar end = new Date();\nend.setDate(end.getDate() + 1);\nend.setHours(23,59,59,999);\n\nreturn [[start.getTime(), value], [end.getTime(), value]];\n"
+                                                                            }
+                                                                        ]
+                                                         }
+                                                     ]
+                                       }
+                                   ]
+                  },
+                  {
+                      "type":  "panel",
+                      "path":  "mobile",
+                      "title":  "MOBILE",
+                      "cards":  [
+                                    {
+                                        "type":  "custom:sunsynk-power-flow-card",
+                                        "cardstyle":  "lite",
+                                        "wide":  false,
+                                        "panel_mode":  false,
+                                        "large_font":  true,
+                                        "show_solar":  true,
+                                        "show_battery":  true,
+                                        "show_grid":  true,
+                                        "decimal_places":  0,
+                                        "inverter":  {
+                                                         "modern":  true,
+                                                         "model":  "deye",
+                                                         "colour":  "#ffffff",
+                                                         "autarky":  "power",
+                                                         "show_temp":  true
+                                                     },
+                                        "solar":  {
+                                                      "mppts":  2,
+                                                      "show_daily":  true,
+                                                      "animation_speed":  4,
+                                                      "colour":  "#f1c40f",
+                                                      "pv1_name":  "PV1",
+                                                      "pv2_name":  "PV2"
+                                                  },
+                                        "battery":  {
+                                                        "energy":  15360,
+                                                        "shutdown_soc":  5,
+                                                        "show_daily":  true,
+                                                        "show_temp":  true,
+                                                        "show_remaining_energy":  true,
+                                                        "animation_speed":  6,
+                                                        "colour":  "#4caf50",
+                                                        "count":  3
+                                                    },
+                                        "grid":  {
+                                                     "show_daily_buy":  true,
+                                                     "animation_speed":  6,
+                                                     "colour":  "#ffffff",
+                                                     "show_daily_sell":  true,
+                                                     "label_daily_grid_buy":  "Day",
+                                                     "label_daily_grid_sell":  "Night"
+                                                 },
+                                        "load":  {
+                                                     "show_daily":  true,
+                                                     "animation_speed":  6,
+                                                     "colour":  "#5fb6ad"
+                                                 },
+                                        "entities":  {
+                                                         "battery_soc_184":  "sensor.deye_battery",
+                                                         "battery_power_190":  "sensor.deye_battery_power",
+                                                         "battery_voltage_183":  "sensor.deye_battery_voltage",
+                                                         "battery_temp_182":  "sensor.deye_battery_temperature",
+                                                         "day_battery_charge_70":  "sensor.deye_today_battery_charge",
+                                                         "day_battery_discharge_71":  "sensor.deye_today_battery_discharge",
+                                                         "day_pv_energy_108":  "sensor.deye_today_production",
+                                                         "pv1_power_186":  "sensor.deye_pv1_power",
+                                                         "pv1_voltage_109":  "sensor.deye_pv1_voltage",
+                                                         "pv1_current_110":  "sensor.deye_pv1_current",
+                                                         "pv2_power_187":  "sensor.deye_pv2_power",
+                                                         "pv2_voltage_111":  "sensor.deye_pv2_voltage",
+                                                         "pv2_current_112":  "sensor.deye_pv2_current",
+                                                         "grid_external_power_167":  "sensor.deye_grid_power",
+                                                         "day_grid_import_76":  "sensor.grid_import_tariff_day",
+                                                         "essential_power":  "sensor.deye_load_power",
+                                                         "day_load_energy_84":  "sensor.deye_today_energy",
+                                                         "inverter_status_59":  "sensor.deye_device_state",
+                                                         "ac_temp":  "sensor.deye_temperature",
+                                                         "day_grid_export_77":  "sensor.grid_import_tariff_night"
+                                                     },
+                                        "card_mod":  {
+                                                         "style":  "ha-card {\n  background: transparent !important;\n  border: none !important;\n  --ha-card-box-shadow: none !important;\n}\n"
+                                                     }
+                                    }
+                                ]
+                  }
+              ]
+}

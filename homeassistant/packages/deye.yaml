@@ -1,0 +1,569 @@
+# Deye SUN-6K-OG01 (off-grid, 48 V) + ha-solarman — пакет Home Assistant.
+# Підключення в configuration.yaml:
+#   homeassistant:
+#     packages: !include_dir_named packages
+# Потрібно: інтеграція ha-solarman (davidrapan) з lookup deye_hybrid.yaml -> сутності deye_*.
+# Замініть notify.mobile_app_YOUR_PHONE на свій сервіс сповіщень.
+
+# ---------------------------------------------------------------- Хелпери
+input_number:
+  # Захист вводу: збережений струм заряду від мережі (0 = захист не активний)
+  deye_grid_charge_saved:
+    name: "Deye: збережений струм заряду (захист вводу)"
+    min: 0
+    max: 240
+    step: 1
+    unit_of_measurement: "A"
+    icon: mdi:shield-lock-outline
+    mode: box
+  tariff_price_day:
+    name: "Тариф: ціна день"
+    min: 0
+    max: 20
+    step: 0.01
+    unit_of_measurement: "грн/кВт·год"
+    icon: mdi:cash
+    mode: box
+  tariff_price_night:
+    name: "Тариф: ціна ніч"
+    min: 0
+    max: 20
+    step: 0.01
+    unit_of_measurement: "грн/кВт·год"
+    icon: mdi:cash
+    mode: box
+
+# ---------------------------------------------------------------- Шаблони
+template:
+  # Повзунок заряду від мережі 0-120 A (OG01 фізично max 135 A, а сирий number має шкалу 0-240)
+  - number:
+      - name: "Deye: заряд від мережі"
+        unique_id: deye_grid_charge_current_0_120
+        icon: mdi:battery-charging
+        unit_of_measurement: "A"
+        min: 0
+        max: 120
+        step: 5
+        availability: "{{ has_value('number.deye_battery_grid_charging_current') }}"
+        state: "{{ [states('number.deye_battery_grid_charging_current') | float(0), 120] | min }}"
+        set_value:
+          - action: number.set_value
+            target:
+              entity_id: number.deye_battery_grid_charging_current
+            data:
+              value: "{{ value | int }}"
+          # ручна зміна повзунка скасовує захист вводу
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.deye_grid_charge_saved
+            data:
+              value: 0
+
+  - sensor:
+      - name: "Мережа: економія (сонце)"
+        unique_id: solar_savings
+        unit_of_measurement: "грн"
+        icon: mdi:cash-plus
+        state_class: total
+        state: >-
+          {{ (states('sensor.solar_production_monthly') | float(0) * states('input_number.tariff_price_day') | float(0)) | round(2) }}
+
+      - name: "Мережа: вартість (день)"
+        unique_id: grid_cost_day
+        unit_of_measurement: "грн"
+        icon: mdi:cash
+        state_class: total
+        state: >-
+          {{ (states('sensor.grid_import_tariff_day') | float(0) * states('input_number.tariff_price_day') | float(0)) | round(2) }}
+
+      - name: "Мережа: вартість (ніч)"
+        unique_id: grid_cost_night
+        unit_of_measurement: "грн"
+        icon: mdi:cash
+        state_class: total
+        state: >-
+          {{ (states('sensor.grid_import_tariff_night') | float(0) * states('input_number.tariff_price_night') | float(0)) | round(2) }}
+
+      - name: "Мережа: вартість (всього)"
+        unique_id: grid_cost_total
+        unit_of_measurement: "грн"
+        icon: mdi:cash-multiple
+        state_class: total
+        state: >-
+          {{ (states('sensor.merezha_vartist_den') | float(0) + states('sensor.merezha_vartist_nich') | float(0)) | round(2) }}
+
+      # Відключення, що почались сьогодні (з журналу нижче). Увімкнення через < 3 хв = «блимання», не рахується.
+      - name: "Відключень за сьогодні"
+        unique_id: grid_off_count_today_log
+        icon: mdi:counter
+        state: >-
+          {% set t0 = as_timestamp(today_at('00:00')) %}
+          {% set ns = namespace(n=0) %}
+          {% for e in state_attr('sensor.merezha_khronologiia', 'events') or [] if as_timestamp(e.t) >= t0 %}
+            {% set ns.n = ns.n + (1 if e.s == 'off' else (-1 if 0 <= (e.d | int(-1)) < 3 and ns.n > 0 else 0)) %}
+          {% endfor %}
+          {{ ns.n }}
+
+      # Скільки протягне батарея: (SOC - shutdown SOC) * ємність / навантаження (середнє за 5 хв).
+      # Ємність: number.deye_battery_capacity (А·год) * 51.2 В. 300 А·год = 15.36 кВт·год.
+      - name: "Батарея: вистачить на"
+        unique_id: battery_runtime_hours
+        icon: mdi:battery-clock
+        unit_of_measurement: "h"
+        device_class: duration
+        availability: "{{ states('sensor.deye_load_power_5min') | float(0) > 50 }}"
+        state: >-
+          {% set soc = states('sensor.deye_battery') | float(0) %}
+          {% set stop = states('number.deye_battery_shutdown_soc') | float(5) %}
+          {% set kwh = states('number.deye_battery_capacity') | float(300) * 51.2 / 1000 %}
+          {% set load_kw = states('sensor.deye_load_power_5min') | float(0) / 1000 %}
+          {{ ([soc - stop, 0] | max / 100 * kwh / load_kw) | round(1) }}
+
+  # Журнал вимкнень/увімкнень мережі за 3 доби (атрибут events: t=час, s=on/off, b=заряд %, d=тривалість відключення, хв).
+  # Подія grid_log_seed замінює журнал (початкове заповнення з історії).
+  - trigger:
+      - trigger: state
+        entity_id: binary_sensor.deye_grid
+        from: "on"
+        to: "off"
+        for: "00:00:30"
+        id: grid
+      - trigger: state
+        entity_id: binary_sensor.deye_grid
+        from: "off"
+        to: "on"
+        for: "00:00:30"
+        id: grid
+      - trigger: event
+        event_type: grid_log_seed
+        id: seed
+    action:
+      - variables:
+          events: >-
+            {% if trigger.id == 'seed' %}
+              {{ trigger.event.data.events }}
+            {% else %}
+              {% set cutoff = as_timestamp(now()) - 259200 %}
+              {% set ns = namespace(l=[]) %}
+              {% for e in (state_attr('sensor.merezha_khronologiia', 'events') or []) %}
+                {% if as_timestamp(e.t) > cutoff %}{% set ns.l = ns.l + [e] %}{% endif %}
+              {% endfor %}
+              {% set new = {
+                't': trigger.to_state.last_changed.isoformat(),
+                's': trigger.to_state.state,
+                'b': states('sensor.deye_battery') | int(0),
+                'd': ((as_timestamp(trigger.to_state.last_changed) - as_timestamp(trigger.from_state.last_changed)) / 60) | int
+                     if trigger.to_state.state == 'on' else none
+              } %}
+              {{ ns.l + [new] }}
+            {% endif %}
+    sensor:
+      - name: "Мережа: хронологія"
+        unique_id: grid_outage_log
+        icon: mdi:transmission-tower
+        state: "{{ events | selectattr('s', 'eq', 'off') | list | count }}"
+        unit_of_measurement: "відключень"
+        attributes:
+          events: "{{ events }}"
+
+# ---------------------------------------------------------------- Статистика
+sensor:
+  - platform: history_stats
+    name: "Без світла сьогодні"
+    unique_id: grid_off_today
+    entity_id: binary_sensor.deye_grid
+    state: "off"
+    type: time
+    start: "{{ today_at('00:00') }}"
+    end: "{{ now() }}"
+  - platform: history_stats
+    name: "Без світла вчора"
+    unique_id: grid_off_yesterday
+    entity_id: binary_sensor.deye_grid
+    state: "off"
+    type: time
+    start: "{{ today_at('00:00') - timedelta(days=1) }}"
+    end: "{{ today_at('00:00') }}"
+  - platform: history_stats
+    name: "Без світла за 7 днів"
+    unique_id: grid_off_7d
+    entity_id: binary_sensor.deye_grid
+    state: "off"
+    type: time
+    start: "{{ today_at('00:00') - timedelta(days=6) }}"
+    end: "{{ now() }}"
+
+  # Середнє навантаження: 30 хв — для текстів сповіщень, 5 хв — для оцінки "вистачить на"
+  - platform: statistics
+    name: "Deye load power 30min"
+    unique_id: deye_load_power_30min
+    entity_id: sensor.deye_load_power
+    state_characteristic: mean
+    max_age:
+      minutes: 30
+    sampling_size: 500
+    precision: 0
+  - platform: statistics
+    name: "Deye load power 5min"
+    unique_id: deye_load_power_5min
+    entity_id: sensor.deye_load_power
+    state_characteristic: mean
+    max_age:
+      minutes: 5
+    sampling_size: 500
+    precision: 0
+
+utility_meter:
+  grid_import_tariff:
+    source: sensor.deye_total_energy_import
+    cycle: daily
+    tariffs:
+      - day
+      - night
+  solar_production_monthly:
+    source: sensor.deye_total_production
+    cycle: monthly
+  grid_off_monthly:
+    name: "Без світла за місяць"
+    source: sensor.bez_svitla_sogodni
+    cycle: monthly
+
+# ---------------------------------------------------------------- Автоматизації
+automation:
+  # Знижує струм заряду батареї зранку (06:00-09:30), потім повертає 100 A.
+  - id: deye_quiet_morning
+    alias: "Deye: Тихий ранок (обмеження заряду)"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "06:00:00"
+        id: start_silent
+      - trigger: time
+        at: "09:30:00"
+        id: stop_silent
+    actions:
+      - action: number.set_value
+        target:
+          entity_id: number.deye_battery_max_charging_current
+        data:
+          value: "{{ 2 if trigger.id == 'start_silent' else 100 }}"
+
+  # Мережа зникла / з'явилась / критичний заряд. У тексті — запас батареї і хронологія за 2 дні.
+  - id: deye_grid_battery_alerts
+    alias: "Інвертор: Сповіщення про мережу та заряд батареї"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.deye_grid
+        from: "on"
+        to: "off"
+        for: "00:00:30"
+        id: grid_off
+      - trigger: state
+        entity_id: binary_sensor.deye_grid
+        from: "off"
+        to: "on"
+        for: "00:00:30"
+        id: grid_on
+      - trigger: numeric_state
+        entity_id: sensor.deye_battery
+        below: 20
+        id: low_battery
+    actions:
+      - delay: "00:00:03"   # щоб журнал (trigger-template) встиг оновитись
+      - variables:
+          chronology: >-
+            {%- set ev = state_attr('sensor.merezha_khronologiia', 'events') or [] -%}
+            {%- set now_ts = as_timestamp(now()) -%}
+            {%- set t0 = as_timestamp(today_at('00:00')) -%}
+            {%- set ns = namespace(iv=[], out=[], off=none) -%}
+            {%- for e in ev -%}
+              {%- if e.s == 'off' -%}
+                {%- set ns.off = as_timestamp(e.t) -%}
+              {%- elif e.d is not none -%}
+                {%- set ns.iv = ns.iv + [[ns.off if ns.off is not none else as_timestamp(e.t) - e.d * 60, as_timestamp(e.t)]] -%}
+                {%- set ns.off = none -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- set ongoing = ev | count > 0 and (ev | last).s == 'off' -%}
+            {%- if ongoing -%}{%- set ns.iv = ns.iv + [[as_timestamp((ev | last).t), now_ts]] -%}{%- endif -%}
+            {%- for ds in [t0, t0 - 86400] -%}
+              {%- set de = ds + 86400 -%}
+              {%- set d = namespace(lines=[], n=0, secs=0, blips=0) -%}
+              {%- for e in ev -%}
+                {%- set ts = as_timestamp(e.t) -%}
+                {%- if ds <= ts < de -%}
+                  {%- set tm = (e.t | as_datetime | as_local).strftime('%H:%M') -%}
+                  {%- set dd = e.d | int(-1) -%}
+                  {%- if e.s == 'off' -%}
+                    {%- set d.n = d.n + 1 -%}
+                    {%- set d.lines = d.lines + ['🔴 ' ~ tm ~ ' вимкнено · 🔋' ~ e.b ~ '%'] -%}
+                  {%- elif 0 <= dd < 3 and d.lines and (d.lines | last).startswith('🔴') -%}
+                    {#- блимання < 3 хв: один рядок замість двох і не рахується як відключення -#}
+                    {%- set d.lines = d.lines[:-1] + ['⚡ ' ~ (d.lines | last)[2:7] ~ ' блимання ' ~ (dd if dd > 0 else '<1') ~ ' хв'] -%}
+                    {%- set d.n = d.n - 1 -%}
+                    {%- set d.blips = d.blips + 1 -%}
+                  {%- else -%}
+                    {%- set dur = '' if dd < 0 else ' · ' ~ ((dd // 60) ~ ' год ' if dd >= 60 else '') ~ (dd % 60) ~ ' хв' -%}
+                    {%- set d.lines = d.lines + ['🟢 ' ~ tm ~ ' увімкнено · 🔋' ~ e.b ~ '%' ~ dur] -%}
+                  {%- endif -%}
+                {%- endif -%}
+              {%- endfor -%}
+              {%- for i in ns.iv -%}
+                {%- set ov = ([i[1], de] | min) - ([i[0], ds] | max) -%}
+                {%- if ov > 0 -%}{%- set d.secs = d.secs + ov -%}{%- endif -%}
+              {%- endfor -%}
+              {%- set mins = (d.secs / 60) | round(0) | int -%}
+              {%- set label = ('Сьогодні' if ds == t0 else 'Вчора') ~ ', ' ~ (ds | timestamp_custom('%d.%m')) -%}
+              {%- set ns.out = ns.out + ['📅 ' ~ label] + (d.lines if d.lines else ['без відключень']) -%}
+              {%- if mins > 0 -%}
+                {%- set ns.out = ns.out + ['⏱ без світла ' ~ ((mins // 60) ~ ' год ' if mins >= 60 else '') ~ (mins % 60) ~ ' хв'
+                    ~ (' · відключень: ' ~ d.n if d.n else '') ~ (' · блимань: ' ~ d.blips if d.blips else '')
+                    ~ (' (триває)' if ongoing and ds == t0 else '')] -%}
+              {%- endif -%}
+              {%- if ds == t0 -%}{%- set ns.out = ns.out + [''] -%}{%- endif -%}
+            {%- endfor -%}
+            {{ ns.out | join('\n') }}
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: grid_off
+            sequence:
+              - variables:
+                  off_time: "{{ (trigger.to_state.last_changed | as_local).strftime('%H:%M') }}"
+                  runtime: >-
+                    {%- set h = states('sensor.batareia_vistachit_na') | float(-1) -%}
+                    {%- if h >= 0 -%}🔋 Вистачить ~{{ (h | int) ~ ' год ' if h >= 1 else '' }}{{ ((h * 60) | int) % 60 }} хв при ~{{ states('sensor.deye_load_power_30min') | int(0) }} Вт{%- endif -%}
+              - action: notify.mobile_app_YOUR_PHONE
+                data:
+                  title: "⚠️ Мережа вимкнена о {{ off_time }}"
+                  message: |-
+                    Живлення будинку перейшло на батарею. Заряд: {{ states('sensor.deye_battery') }}%
+                    {{ runtime }}
+
+                    Хронологія:
+                    {{ chronology }}
+                  data:
+                    priority: high
+                    ttl: 0
+                    channel: power_grid
+                    importance: high
+                    tag: power_grid
+                    sticky: "true"
+                    clickAction: /history?entity_id=binary_sensor.deye_grid,sensor.deye_battery
+              - action: persistent_notification.create
+                data:
+                  notification_id: grid_log
+                  title: "⚠️ Мережа вимкнена о {{ off_time }}"
+                  message: |-
+                    Живлення будинку перейшло на батарею. Заряд: {{ states('sensor.deye_battery') }}%
+                    {{ runtime }}
+
+                    **Хронологія:**
+                    {{ chronology | replace('\n', '  \n') }}
+          - conditions:
+              - condition: trigger
+                id: grid_on
+            sequence:
+              - variables:
+                  on_time: "{{ (trigger.to_state.last_changed | as_local).strftime('%H:%M') }}"
+                  duration: >-
+                    {% set s = (as_timestamp(trigger.to_state.last_changed) - as_timestamp(trigger.from_state.last_changed)) | int %}
+                    {% set h = s // 3600 %}{% set m = (s % 3600) // 60 %}
+                    {% if h > 0 %}{{ h }} год {{ m }} хв{% else %}{{ m }} хв{% endif %}
+                  blip: "{{ (as_timestamp(trigger.to_state.last_changed) - as_timestamp(trigger.from_state.last_changed)) < 180 }}"
+              - action: notify.mobile_app_YOUR_PHONE
+                data:
+                  title: "{{ '⚡ Коротке блимання' if blip else '✅ Мережа відновлена' }} о {{ on_time }}"
+                  message: |-
+                    Світла не було {{ duration }}. Заряд батареї: {{ states('sensor.deye_battery') }}%
+
+                    Хронологія:
+                    {{ chronology }}
+                  data:
+                    priority: high
+                    ttl: 0
+                    channel: power_grid
+                    importance: high
+                    tag: power_grid
+                    sticky: "true"
+                    clickAction: /history?entity_id=binary_sensor.deye_grid,sensor.deye_battery
+              - action: persistent_notification.create
+                data:
+                  notification_id: grid_log
+                  title: "{{ '⚡ Коротке блимання' if blip else '✅ Мережа відновлена' }} о {{ on_time }}"
+                  message: |-
+                    Світла не було {{ duration }}. Заряд батареї: {{ states('sensor.deye_battery') }}%
+
+                    **Хронологія:**
+                    {{ chronology | replace('\n', '  \n') }}
+          - conditions:
+              - condition: trigger
+                id: low_battery
+              - condition: state
+                entity_id: binary_sensor.deye_grid
+                state: "off"
+            sequence:
+              - action: notify.mobile_app_YOUR_PHONE
+                data:
+                  title: "🔋 Критично низький заряд!"
+                  message: "Батарея {{ states('sensor.deye_battery') }}%, мережі немає. Перевірте систему."
+                  data:
+                    priority: high
+                    ttl: 0
+
+  - id: deye_radiator_overheat_2026
+    alias: "Deye: Перегрів радіатора"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.deye_temperature
+        above: 75
+        for:
+          minutes: 2
+        id: overheat
+      - trigger: numeric_state
+        entity_id: sensor.deye_temperature
+        below: 65
+        id: cooled_down
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: overheat
+            sequence:
+              - action: notify.mobile_app_YOUR_PHONE
+                data:
+                  title: "🌡️ Перегрів радіатора інвертора"
+                  message: "Температура радіатора {{ states('sensor.deye_temperature') }}°C. Перевірте вентиляцію/навантаження."
+                  data:
+                    priority: high
+                    ttl: 0
+          - conditions:
+              - condition: trigger
+                id: cooled_down
+            sequence:
+              - action: notify.mobile_app_YOUR_PHONE
+                data:
+                  title: "✅ Радіатор охолов"
+                  message: "Температура радіатора {{ states('sensor.deye_temperature') }}°C, в нормі."
+
+  - id: deye_battery_full_2026
+    alias: "Deye: Акумулятор 100%"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.deye_battery
+        above: 99
+    actions:
+      - action: notify.mobile_app_YOUR_PHONE
+        data:
+          title: "🔋 Батарея заряджена на 100%"
+          message: "Акумулятор повний."
+
+  # Тариф день/ніч для utility_meter (23:00-07:00 ніч); при старті HA одразу виставляє правильний.
+  - id: grid_tariff_switch_2026
+    alias: "Мережа: перемикання тарифу день/ніч"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "23:00:00"
+      - trigger: time
+        at: "07:00:00"
+      - trigger: homeassistant
+        event: start
+    actions:
+      - action: select.select_option
+        target:
+          entity_id: select.grid_import_tariff
+        data:
+          option: "{{ 'night' if now().hour >= 23 or now().hour < 7 else 'day' }}"
+
+  # Захист вводу: інвертор на одній фазі з автоматом 32 A (~7.4 кВт).
+  # Якщо з мережі > 6 кВт 5 с — струм заряду від мережі до 20 A, якщо за 15 с не допомогло — до 0.
+  - id: deye_grid_input_protection
+    alias: "Deye: захист вводу (заряд від мережі)"
+    mode: single
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.deye_grid_power
+        above: 6000
+        for: "00:00:05"
+    conditions:
+      - condition: numeric_state
+        entity_id: number.deye_battery_grid_charging_current
+        above: 0
+    actions:
+      - variables:
+          cur: "{{ states('number.deye_battery_grid_charging_current') | int(0) }}"
+          new: "{{ 20 if cur > 20 else 0 }}"
+      - if:
+          - condition: numeric_state
+            entity_id: input_number.deye_grid_charge_saved
+            below: 1
+        then:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.deye_grid_charge_saved
+            data:
+              value: "{{ cur }}"
+      - action: number.set_value
+        target:
+          entity_id: number.deye_battery_grid_charging_current
+        data:
+          value: "{{ new }}"
+      - action: logbook.log
+        data:
+          name: Захист вводу
+          message: "з мережі {{ states('sensor.deye_grid_power') }} Вт: заряд {{ cur }} → {{ new }} A"
+          entity_id: number.deye_battery_grid_charging_current
+      - delay: "00:00:15"
+      - if:
+          - condition: numeric_state
+            entity_id: sensor.deye_grid_power
+            above: 6000
+          - condition: numeric_state
+            entity_id: number.deye_battery_grid_charging_current
+            above: 0
+        then:
+          - action: number.set_value
+            target:
+              entity_id: number.deye_battery_grid_charging_current
+            data:
+              value: 0
+          - action: logbook.log
+            data:
+              name: Захист вводу
+              message: "з мережі досі {{ states('sensor.deye_grid_power') }} Вт: заряд → 0 A"
+              entity_id: number.deye_battery_grid_charging_current
+
+  # Повертає збережений струм, коли навантаження + повернений заряд < 5.5 кВт протягом 1 хв.
+  - id: deye_grid_input_protection_restore
+    alias: "Deye: захист вводу — повернути струм заряду"
+    mode: single
+    triggers:
+      - trigger: template
+        value_template: >-
+          {%- set saved = states('input_number.deye_grid_charge_saved') | float(0) -%}
+          {%- set cur = states('number.deye_battery_grid_charging_current') | float(0) -%}
+          {%- set v = states('sensor.deye_battery_voltage') | float(54) -%}
+          {{ saved > 0 and (states('sensor.deye_grid_power') | float(0)) + (saved - cur) * v * 1.08 < 5500 }}
+        for: "00:01:00"
+    actions:
+      - variables:
+          saved: "{{ states('input_number.deye_grid_charge_saved') | int(0) }}"
+      - action: number.set_value
+        target:
+          entity_id: number.deye_battery_grid_charging_current
+        data:
+          value: "{{ saved }}"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.deye_grid_charge_saved
+        data:
+          value: 0
+      - action: logbook.log
+        data:
+          name: Захист вводу
+          message: "навантаження спало: заряд повернено до {{ saved }} A"
+          entity_id: number.deye_battery_grid_charging_current

@@ -1,0 +1,383 @@
+{
+    "views":  [
+                  {
+                      "type":  "sections",
+                      "sections":  [
+                                       {
+                                           "type":  "grid",
+                                           "cards":  [
+                                                         {
+                                                             "type":  "heading",
+                                                             "heading":  "Енергія — потік у реальному часі"
+                                                         },
+                                                         {
+                                                             "type":  "custom:power-flow-card-plus",
+                                                             "entities":  {
+                                                                              "battery":  {
+                                                                                              "entity":  "sensor.deye_battery_power",
+                                                                                              "state_of_charge_unit":  "%",
+                                                                                              "state_of_charge":  "sensor.deye_battery",
+                                                                                              "invert_state_of_charge":  false,
+                                                                                              "invert_power":  true
+                                                                                          },
+                                                                              "grid":  {
+                                                                                           "entity":  "sensor.deye_grid_power"
+                                                                                       },
+                                                                              "solar":  {
+                                                                                            "entity":  {
+                                                                                                           "production":  "sensor.deye_pv1_power",
+                                                                                                           "production2":  "sensor.deye_pv2_power"
+                                                                                                       }
+                                                                                        },
+                                                                              "home":  {
+
+                                                                                       }
+                                                                          },
+                                                             "clickable_entities":  true,
+                                                             "display_zero_lines":  {
+                                                                                        "mode":  "show"
+                                                                                    },
+                                                             "watt_threshold":  1000
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Заряд батареї",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_battery\u0027) }}%",
+                                                             "icon":  "mdi:battery-high",
+                                                             "icon_color":  "green",
+                                                             "entity":  "sensor.deye_battery",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Мережа",
+                                                             "secondary":  "{{ \u0027Підключена\u0027 if is_state(\u0027binary_sensor.deye_grid\u0027,\u0027on\u0027) else \u0027Вимкнена\u0027 }}",
+                                                             "icon":  "mdi:transmission-tower",
+                                                             "icon_color":  "{{ \u0027green\u0027 if is_state(\u0027binary_sensor.deye_grid\u0027,\u0027on\u0027) else \u0027red\u0027 }}",
+                                                             "entity":  "binary_sensor.deye_grid",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Навантаження будинку",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_load_power\u0027) }} Вт",
+                                                             "icon":  "mdi:home-lightning-bolt",
+                                                             "icon_color":  "amber",
+                                                             "entity":  "sensor.deye_load_power",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Зв\u0027язок з інвертором",
+                                                             "secondary":  "{{ \u0027Онлайн\u0027 if is_state(\u0027binary_sensor.deye_connection\u0027,\u0027on\u0027) else \u0027Немає зв\\\u0027язку\u0027 }}",
+                                                             "icon":  "mdi:wifi",
+                                                             "icon_color":  "{{ \u0027green\u0027 if is_state(\u0027binary_sensor.deye_connection\u0027,\u0027on\u0027) else \u0027red\u0027 }}",
+                                                             "entity":  "binary_sensor.deye_connection",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          },
+                                                             "tap_action":  {
+                                                                                "action":  "more-info"
+                                                                            }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Батарея: аварії",
+                                                             "secondary":  "{{ \u0027Тривога!\u0027 if is_state(\u0027binary_sensor.deye_battery_alarm\u0027,\u0027on\u0027) or is_state(\u0027binary_sensor.deye_battery_fault\u0027,\u0027on\u0027) else \u0027Норма\u0027 }}",
+                                                             "icon":  "mdi:battery-alert-variant-outline",
+                                                             "icon_color":  "{{ \u0027red\u0027 if is_state(\u0027binary_sensor.deye_battery_alarm\u0027,\u0027on\u0027) or is_state(\u0027binary_sensor.deye_battery_fault\u0027,\u0027on\u0027) else \u0027green\u0027 }}",
+                                                             "entity":  "binary_sensor.deye_battery_alarm",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          },
+                                                             "tap_action":  {
+                                                                                "action":  "more-info"
+                                                                            }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Температура інвертора",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_temperature\u0027) }}°C",
+                                                             "icon":  "mdi:thermometer",
+                                                             "icon_color":  "{% set t = states(\u0027sensor.deye_temperature\u0027)|float(0) %}{% if t \u003e 75 %}red{% elif t \u003e 65 %}amber{% else %}green{% endif %}",
+                                                             "entity":  "sensor.deye_temperature",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          },
+                                                             "tap_action":  {
+                                                                                "action":  "more-info"
+                                                                            }
+                                                         }
+                                                     ]
+                                       },
+                                       {
+                                           "type":  "grid",
+                                           "cards":  [
+                                                         {
+                                                             "type":  "heading",
+                                                             "heading":  "Сьогодні"
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Генерація сонця",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_today_production\u0027) }} кВт·год",
+                                                             "icon":  "mdi:solar-power",
+                                                             "icon_color":  "amber",
+                                                             "entity":  "sensor.deye_today_production",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Заряд батареї",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_today_battery_charge\u0027) }} кВт·год ({{ (states(\u0027sensor.deye_today_battery_charge\u0027)|float(0) / 15.36 * 100) | round(1) }}%)",
+                                                             "icon":  "mdi:battery-plus-variant",
+                                                             "icon_color":  "green",
+                                                             "entity":  "sensor.deye_today_battery_charge",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Розряд батареї",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_today_battery_discharge\u0027) }} кВт·год ({{ (states(\u0027sensor.deye_today_battery_discharge\u0027)|float(0) / 15.36 * 100) | round(1) }}%)",
+                                                             "icon":  "mdi:battery-minus-variant",
+                                                             "icon_color":  "orange",
+                                                             "entity":  "sensor.deye_today_battery_discharge",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Спожито з мережі",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_today_energy_import\u0027) }} кВт·год",
+                                                             "icon":  "mdi:transmission-tower-import",
+                                                             "icon_color":  "red",
+                                                             "entity":  "sensor.deye_today_energy_import",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Спожито будинком",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_today_load_consumption\u0027) }} кВт·год",
+                                                             "icon":  "mdi:home-lightning-bolt-outline",
+                                                             "icon_color":  "amber",
+                                                             "entity":  "sensor.deye_today_load_consumption",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          },
+                                                             "tap_action":  {
+                                                                                "action":  "more-info"
+                                                                            }
+                                                         }
+                                                     ]
+                                       },
+                                       {
+                                           "type":  "grid",
+                                           "cards":  [
+                                                         {
+                                                             "type":  "heading",
+                                                             "heading":  "Всього (з початку роботи)"
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Всього згенеровано",
+                                                             "secondary":  "{{ states(\u0027sensor.deye_total_production\u0027) }} кВт·год",
+                                                             "icon":  "mdi:solar-power-variant",
+                                                             "icon_color":  "amber",
+                                                             "entity":  "sensor.deye_total_production",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         },
+                                                         {
+                                                             "type":  "custom:mushroom-template-card",
+                                                             "primary":  "Зекономлено коштів",
+                                                             "secondary":  "{{ (states(\u0027sensor.deye_total_production\u0027)|float(0) * states(\u0027input_number.tariff_price_day\u0027)|float(0)) | round(2) }} грн",
+                                                             "icon":  "mdi:cash-multiple",
+                                                             "icon_color":  "green",
+                                                             "entity":  "sensor.deye_total_production",
+                                                             "card_mod":  {
+                                                                              "style":  ".secondary { color: #f1c40f !important; }"
+                                                                          }
+                                                         }
+                                                     ]
+                                       },
+                                       {
+                                           "type":  "grid",
+                                           "cards":  [
+                                                         {
+                                                             "type":  "heading",
+                                                             "heading":  "Тренд за 7 днів"
+                                                         },
+                                                         {
+                                                             "type":  "custom:apexcharts-card",
+                                                             "header":  {
+                                                                            "show":  true,
+                                                                            "title":  "Генерація vs Заряд vs Розряд батареї (кВт·год/день)",
+                                                                            "show_states":  false
+                                                                        },
+                                                             "graph_span":  "7d",
+                                                             "yaxis":  [
+                                                                           {
+                                                                               "min":  0,
+                                                                               "decimals":  1
+                                                                           }
+                                                                       ],
+                                                             "series":  [
+                                                                            {
+                                                                                "entity":  "sensor.deye_today_production",
+                                                                                "name":  "Сонце",
+                                                                                "type":  "column",
+                                                                                "color":  "#f1c40f",
+                                                                                "group_by":  {
+                                                                                                 "func":  "max",
+                                                                                                 "duration":  "1d"
+                                                                                             }
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.deye_today_battery_charge",
+                                                                                "name":  "Заряд батареї",
+                                                                                "type":  "column",
+                                                                                "color":  "#4caf50",
+                                                                                "group_by":  {
+                                                                                                 "func":  "max",
+                                                                                                 "duration":  "1d"
+                                                                                             }
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.deye_today_battery_discharge",
+                                                                                "name":  "Розряд батареї",
+                                                                                "type":  "column",
+                                                                                "color":  "#e34948",
+                                                                                "group_by":  {
+                                                                                                 "func":  "max",
+                                                                                                 "duration":  "1d"
+                                                                                             }
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.deye_today_energy_import",
+                                                                                "name":  "З мережі",
+                                                                                "type":  "column",
+                                                                                "color":  "#2a78d6",
+                                                                                "group_by":  {
+                                                                                                 "func":  "max",
+                                                                                                 "duration":  "1d"
+                                                                                             }
+                                                                            }
+                                                                        ]
+                                                         },
+                                                         {
+                                                             "type":  "statistics-graph",
+                                                             "title":  "Батарея — заряд/розряд по днях",
+                                                             "entities":  [
+                                                                              "sensor.deye_today_battery_charge",
+                                                                              "sensor.deye_today_battery_discharge"
+                                                                          ],
+                                                             "days_to_show":  7,
+                                                             "stat_types":  [
+                                                                                "sum"
+                                                                            ]
+                                                         }
+                                                     ]
+                                       },
+                                       {
+                                           "type":  "grid",
+                                           "cards":  [
+                                                         {
+                                                             "type":  "heading",
+                                                             "heading":  "Прогноз генерації"
+                                                         },
+                                                         {
+                                                             "type":  "custom:apexcharts-card",
+                                                             "header":  {
+                                                                            "show":  true,
+                                                                            "title":  "Прогноз vs Факт (кВт·год)",
+                                                                            "show_states":  true,
+                                                                            "colorize_states":  true
+                                                                        },
+                                                             "graph_span":  "2d",
+                                                             "span":  {
+                                                                          "start":  "day"
+                                                                      },
+                                                             "now":  {
+                                                                         "show":  true,
+                                                                         "label":  "Зараз",
+                                                                         "color":  "#ff0000"
+                                                                     },
+                                                             "yaxis":  [
+                                                                           {
+                                                                               "id":  "energy",
+                                                                               "min":  0,
+                                                                               "decimals":  1
+                                                                           },
+                                                                           {
+                                                                               "id":  "temp",
+                                                                               "opposite":  true,
+                                                                               "min":  0,
+                                                                               "max":  100,
+                                                                               "decimals":  0,
+                                                                               "apex_config":  {
+                                                                                                   "title":  {
+                                                                                                                 "text":  "°C"
+                                                                                                             }
+                                                                                               }
+                                                                           }
+                                                                       ],
+                                                             "series":  [
+                                                                            {
+                                                                                "entity":  "sensor.deye_today_production",
+                                                                                "name":  "Реальна генерація",
+                                                                                "type":  "line",
+                                                                                "color":  "#4caf50",
+                                                                                "stroke_width":  3,
+                                                                                "extend_to":  "now",
+                                                                                "yaxis_id":  "energy"
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.energy_production_today",
+                                                                                "name":  "Прогноз (сьогодні)",
+                                                                                "type":  "line",
+                                                                                "color":  "orange",
+                                                                                "stroke_width":  2,
+                                                                                "yaxis_id":  "energy",
+                                                                                "data_generator":  "var stateStr = String(entity.state).replace(\u0027,\u0027, \u0027.\u0027);\nvar value = parseFloat(stateStr);\nif (isNaN(value)) return [];\n\nvar start = new Date();\nstart.setHours(0,0,0,0);\nvar end = new Date();\nend.setHours(23,59,59,999);\n\nreturn [[start.getTime(), value], [end.getTime(), value]];\n"
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.energy_production_tomorrow",
+                                                                                "name":  "Прогноз (завтра)",
+                                                                                "type":  "line",
+                                                                                "color":  "#00bfff",
+                                                                                "stroke_width":  2,
+                                                                                "yaxis_id":  "energy",
+                                                                                "data_generator":  "var stateStr = String(entity.state).replace(\u0027,\u0027, \u0027.\u0027);\nvar value = parseFloat(stateStr);\nif (isNaN(value)) return [];\n\nvar start = new Date();\nstart.setDate(start.getDate() + 1);\nstart.setHours(0,0,0,0);\nvar end = new Date();\nend.setDate(end.getDate() + 1);\nend.setHours(23,59,59,999);\n\nreturn [[start.getTime(), value], [end.getTime(), value]];\n"
+                                                                            },
+                                                                            {
+                                                                                "entity":  "sensor.deye_temperature",
+                                                                                "name":  "Температура інвертора",
+                                                                                "type":  "line",
+                                                                                "color":  "#f1c40f",
+                                                                                "stroke_width":  2,
+                                                                                "yaxis_id":  "temp",
+                                                                                "extend_to":  "now"
+                                                                            }
+                                                                        ]
+                                                         }
+                                                     ]
+                                       }
+                                   ],
+                      "theme":  "kotel_dark"
+                  }
+              ]
+}
